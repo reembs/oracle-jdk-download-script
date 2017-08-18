@@ -7,3 +7,5 @@ Requires that docker is inastalled (and also make)
 Just run ```make build && make run```
 
 Specify what java binary format to download via the ```DISTRO_BIN``` environment variable. Default is ```linux-x64.tar.gz```. If you'd like to skip build numbers less or equal to a certain version,  specify environment variable ```JAVA_BUILD_NUMBER_GT=144```. The version artifact would be downloaded to your working directory by default, change via the ```DEST``` var.
+
+The script will also validate the binary checksum and will verify that you're aware of terms changes and approve them.
