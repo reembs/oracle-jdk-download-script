@@ -1,4 +1,4 @@
-c ?= ${PWD}
+DEST ?= ${PWD}
 
 build:
 	docker build . -t java_downloader_image
