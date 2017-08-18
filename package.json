@@ -1,0 +1,14 @@
+{
+  "name": "java-downloader-docker",
+  "version": "1.0.0",
+  "description": "Use headless Chrome to download Oracle Java automatically",
+  "main": "jd.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^0.9.0"
+  }
+}

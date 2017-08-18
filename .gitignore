@@ -1,0 +1,5 @@
+.idea
+*.iml
+*.gz
+terms.txt
+node_modules
