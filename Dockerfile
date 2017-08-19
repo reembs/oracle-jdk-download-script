@@ -8,6 +8,7 @@ RUN mkdir /app && chown headless:headless /app
 USER headless
 WORKDIR /app
 RUN npm i puppeteer
-COPY *.js /app/
+COPY jd.js /app/
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD node /app/jd.js
