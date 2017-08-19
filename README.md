@@ -1,6 +1,6 @@
 # oracle-jdk-download-script
 
-[![Build Status](https://travis-ci.org/reembs/oracle-jdk-download-script.svg?branch=master)](https://travis-ci.org/travis-ci.org/reembs/oracle-jdk-download-script)
+[![Build Status](https://travis-ci.org/reembs/oracle-jdk-download-script.svg?branch=master)](https://travis-ci.org/reembs/oracle-jdk-download-script)
 
 A script to download Oracle Java JDK non-interactively using Docker and Chrome headless. 
 
