@@ -100,7 +100,7 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
         }
     }
 
-    page.setRequestInterceptionEnabled(true);
+    await page.setRequestInterceptionEnabled(true);
 
     let req_url = null;
     let headers = null;
