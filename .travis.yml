@@ -21,6 +21,6 @@ script:
 after_success:
   - if [ "$TRAVIS_BRANCH" == "master" ]; then
     docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}";
-    docker tag $REPO:$TAG $REPO;
-    docker push $REPO;
+    docker tag $REPO:$TAG $REPO:latest;
+    docker push $REPO:latest;
     fi
