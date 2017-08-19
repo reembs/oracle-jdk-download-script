@@ -4,9 +4,7 @@
 
 A script to download Oracle Java JDK non-interactively using Docker and Chrome headless. 
 
-Requires that docker is inastalled (and also make)
-
-Just clone the code and run ```make build && make run```
+Just clone the repo and run ```make build && make run```
 
 To run without cloning:
 ```bash
