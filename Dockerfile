@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y curl && curl -sL https://deb.nodesource
 RUN mkdir /app && chown headless:headless /app
 USER headless
 WORKDIR /app
-RUN npm i puppeteer
+COPY package.json /app/
+RUN npm install
 COPY jd.js /app/
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
