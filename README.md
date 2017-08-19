@@ -14,6 +14,8 @@ The script will also validate the binary checksum and will verify that you're aw
 
 This project was build using:
 
-[https://chromium.googlesource.com/chromium/src/+/lkgr/headless/README.md](Headless Chrome)
-[https://github.com/GoogleChrome/puppeteer](Puppeteer)
-[https://github.com/yukinying/chrome-headless-browser-docker](chrome-headless-browser-docker)
+[Headless Chrome](https://chromium.googlesource.com/chromium/src/+/lkgr/headless/README.md)
+
+[Puppeteer](https://github.com/GoogleChrome/puppeteer)
+
+[chrome-headless-browser-docker](https://github.com/yukinying/chrome-headless-browser-docker)
