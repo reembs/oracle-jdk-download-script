@@ -1,0 +1,26 @@
+sudo: required
+dist: trusty
+group: edge
+
+services:
+  - docker
+
+language: bash
+
+env:
+  - REPO=reembs/oracle-java-jdk-downloader TAG=${TRAVIS_BRANCH}
+
+before_install:
+  - make build
+
+script:
+  - mkdir -p tmp_run
+  - chmod 777 tmp_run
+  - DEST=${PWD}/tmp_run make run
+
+after_success:
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+    docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+    docker tag $REPO:$TAG $REPO;
+    docker push $REPO;
+    fi

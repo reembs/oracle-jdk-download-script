@@ -1,7 +1,9 @@
 DEST ?= ${PWD}
+REPO ?= reembs/oracle-java-jdk-downloader
+TAG ?= latest
 
 build:
-	docker build . -t java_downloader_image
+	docker build --pull -t ${REPO}:${TAG} .
 
 run:
 	docker run --cap-add=SYS_ADMIN --init --shm-size=1024m \
@@ -12,4 +14,5 @@ run:
 	-e VOLUME \
 	-e JAVA_MAJOR_VERSION \
 	-e JAVA_BUILD_NUMBER_GT \
-	-ti java_downloader_image node jd.js
+	-e TERMS_TEXT_HASH \
+	-ti ${REPO}:${TAG} node jd.js

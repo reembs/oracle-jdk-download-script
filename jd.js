@@ -5,8 +5,8 @@ const url = require('url');
 const crypto = require('crypto');
 
 process.on('unhandledRejection', (err) => {
-	console.error(err);
-	process.exit(1)
+    console.error(err);
+    process.exit(1)
 });
 
 function envIntDefault (env, def) {
@@ -27,6 +27,7 @@ const destination = process.env.VOLUME || '/vol';
 const majorVersionEquals = envIntDefault(process.env.JAVA_MAJOR_VERSION, 8);
 const buildNumberGreaterThan = envIntDefault(process.env.JAVA_BUILD_NUMBER_GT, null);
 const termsUrl = 'http://www.oracle.com/technetwork/java/javase/terms/license/index.html';
+const termsTextHash = process.env.TERMS_TEXT_HASH;
 
 (async() => {
     const browser = await puppeteer.launch();
@@ -39,8 +40,23 @@ const termsUrl = 'http://www.oracle.com/technetwork/java/javase/terms/license/in
         return document.querySelector('#Wrapper_FixedWidth_Centercontent').innerText;
     });
 
-    if (!fs.existsSync(`${destination}/terms.txt`) ||
-        normalizeText(termsText) !== normalizeText(fs.readFileSync(`${destination}/terms.txt`, { encoding: 'utf-8' }))) {
+    let termsNormalizedFromWeb = normalizeText(termsText);
+    if (!termsNormalizedFromWeb) {
+        throw new Error(`Could not get terms and conditions from web: ${termsUrl}"`);
+    }
+
+    const hash = crypto.createHash('sha256');
+    hash.update(termsNormalizedFromWeb);
+    const termsHash = hash.digest('hex');
+
+    console.log(`Checking of acceptance of terms text with hash: ${termsHash}`);
+
+    let termsNormalizedFromDisk = null;
+    if (fs.existsSync(`${destination}/terms.txt`)) {
+        termsNormalizedFromDisk = normalizeText(fs.readFileSync(`${destination}/terms.txt`, { encoding: 'utf-8' }));
+    }
+
+    if (termsNormalizedFromDisk !== termsNormalizedFromWeb && termsTextHash !== termsHash) {
         console.log(`You must first read and accept the terms and conditions at ${termsUrl}. After doing so, copy and paste the entire text of the license agreement (including the title) into a file named terms.txt in your destination folder.`);
         process.exit(1);
         return;
@@ -57,9 +73,9 @@ const termsUrl = 'http://www.oracle.com/technetwork/java/javase/terms/license/in
         link.click();
     });
 
-	await page.waitForSelector('form.lic_form input');
+    await page.waitForSelector('form.lic_form input');
     const versionArr = await page.evaluate(function() {
-		const inputs = Array.from(document.querySelectorAll('form.lic_form input'));
+        const inputs = Array.from(document.querySelectorAll('form.lic_form input'));
         const agreeRadio = inputs.find(i => {
             return i.attributes['onclick'].value.startsWith('acceptAgreement');
         });
@@ -84,37 +100,37 @@ const termsUrl = 'http://www.oracle.com/technetwork/java/javase/terms/license/in
         }
     }
 
-	page.setRequestInterceptionEnabled(true);
+    page.setRequestInterceptionEnabled(true);
 
-	let req_url = null;
-	let headers = null;
-	page.on('request', res => {
-		const req = res;
-		if (req.url.indexOf("AuthParam") !== -1) {
-			req_url = req.url;
+    let req_url = null;
+    let headers = null;
+    page.on('request', res => {
+        const req = res;
+        if (req.url.indexOf("AuthParam") !== -1) {
+            req_url = req.url;
 
             headers = Object.create(null);
             for (let [k,v] of req.headers) {
                 headers[k] = v;
             }
 
-			req.abort()
-		} else {
-			req.continue();
-		}
-	});
+            req.abort()
+        } else {
+            req.continue();
+        }
+    });
 
-	const cookie = await page.evaluate(() => {
-		return document.cookie;
-	});
+    const cookie = await page.evaluate(() => {
+        return document.cookie;
+    });
 
-	await page.evaluate(function(searchDistro) {
-		const anchors = Array.from(document.querySelectorAll('table.downloadBox tbody tr td a'));
+    await page.evaluate(function(searchDistro) {
+        const anchors = Array.from(document.querySelectorAll('table.downloadBox tbody tr td a'));
         const dlLink = anchors.find(anchor => {
             return anchor.textContent.endsWith(searchDistro);
         });
         dlLink.click()
-	}, searchDistro);
+    }, searchDistro);
 
     const sigPage = await browser.newPage();
 
@@ -148,37 +164,37 @@ const termsUrl = 'http://www.oracle.com/technetwork/java/javase/terms/license/in
 
     console.debug(`Browser closing.\nURL: ${req_url}\nCookie: ${cookie}\nHeaders: ${JSON.stringify(headers)}`);
 
-	browser.close();
+    browser.close();
 
-	const request = http.get({
-		'protocol': p_url.protocol,
-		'host': p_url.host,
-		'path': p_url.pathname + p_url.search,
-		'headers': Object.assign(headers, {
-			'Cookie': cookie
-		})
-	});
+    const request = http.get({
+        'protocol': p_url.protocol,
+        'host': p_url.host,
+        'path': p_url.pathname + p_url.search,
+        'headers': Object.assign(headers, {
+            'Cookie': cookie
+        })
+    });
 
-	request.addListener('error', err => {
-		console.error(err);
-	});
+    request.addListener('error', err => {
+        console.error(err);
+    });
 
-	request.addListener('response', function (response) {
+    request.addListener('response', function (response) {
         const downloadfile = fs.createWriteStream(`${destination}/${filename}`, {'flags': 'a'});
         const hash = crypto.createHash('sha256');
         console.log(`File ${filename}, size: ${response.headers['content-length']} bytes.`);
-		response.addListener('data', function (chunk) {
-		    hash.update(chunk);
-			downloadfile.write(chunk);
-		});
-		response.addListener("end", function() {
-			downloadfile.end();
-			console.log("Finished downloading");
-			const downloadedHash = hash.digest('hex');
+        response.addListener('data', function (chunk) {
+            hash.update(chunk);
+            downloadfile.write(chunk);
+        });
+        response.addListener("end", function() {
+            downloadfile.end();
+            console.log("Finished downloading");
+            const downloadedHash = hash.digest('hex');
             console.log(`Downloaded hash: ${downloadedHash}`);
             if (versionHash[1] !== downloadedHash) {
                 throw new Error("Validation failed");
             }
-		});
-	});
+        });
+    });
 })();
