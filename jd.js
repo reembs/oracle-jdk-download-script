@@ -20,11 +20,18 @@ function normalizeText(text) {
     return text.replace(/\W/g,'');
 }
 
-const searchDistro = process.env.DISTRO_BIN || 'linux-x64.tar.gz';
-const downloadPageUrl = process.env.DOWNLOAD_PAGE || 'http://www.oracle.com/technetwork/java/javase/downloads/index.html';
-const checksumPagePattern = process.env.CHECKSUM_PAGE || 'https://www.oracle.com/webfolder/s/digest/{version}u{build}checksum.html';
-const destination = process.env.VOLUME || '/vol';
+const downloadPageUrl = process.env.DOWNLOAD_PAGE ||
+    'http://www.oracle.com/technetwork/java/javase/downloads/index.html';
+
+const destination = !process.env.VOLUME ? '/vol' : process.env.VOLUME;
 const majorVersionEquals = envIntDefault(process.env.JAVA_MAJOR_VERSION, 8);
+const searchDistro = !process.env.DISTRO_BIN ? majorVersionEquals === 9 ?
+    'linux-x64_bin.tar.gz' :
+    'linux-x64.tar.gz' : process.env.DISTRO_BIN;
+
+const checksumPagePattern = !process.env.CHECKSUM_PAGE ?
+    'https://www.oracle.com/webfolder/s/digest/{version}{build}checksum.html' : process.env.CHECKSUM_PAGE;
+
 const buildNumberGreaterThan = envIntDefault(process.env.JAVA_BUILD_NUMBER_GT, null);
 const termsUrl = 'http://www.oracle.com/technetwork/java/javase/terms/license/index.html';
 const termsTextHash = process.env.TERMS_TEXT_HASH;
@@ -64,14 +71,27 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
 
     await page.goto(downloadPageUrl, {waitUntil: 'networkidle'});
     await page.waitForSelector('table.dataTable tbody tr td h3');
-    await page.evaluate(function() {
-        const link = Array.from(document.querySelectorAll('table.dataTable tbody tr td h3'))
-            .find(n => n.innerText === "JDK").parentNode.querySelector('div a');
+    await page.evaluate(function(majorVersionEquals) {
+        const links= Array.from(document.querySelectorAll('table.dataTable tbody tr td h3[id=javasejdk]'))
+            .map(n => n.querySelector('a'))
+            .filter(n => n !== null)
+            .map(n => { return {
+                'version': n.attributes['name'].value,
+                'node': n.parentNode
+            }});
+
+        if (!links) {
+            throw new Error('Could not locate major JDK version link on main download page')
+        }
+
+        const link = links.find(l => l['version'] === `JDK${majorVersionEquals}`);
+
         if (!link) {
             throw new Error('Could not locate link on main download page')
         }
-        link.click();
-    });
+
+        link['node'].querySelector('a').click()
+    }, majorVersionEquals);
 
     await page.waitForSelector('form.lic_form input');
     const versionArr = await page.evaluate(function() {
@@ -134,9 +154,12 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
 
     const sigPage = await browser.newPage();
 
-    const checksumPageUrl = checksumPagePattern
-        .replace('{version}', versionArr[0])
-        .replace('{build}', versionArr[1]);
+    let checksumPageUrl = checksumPagePattern.replace('{version}', versionArr[0]);
+    if (versionArr[1]) {
+        checksumPageUrl = checksumPageUrl.replace('{build}', 'u' + versionArr[1]);
+    } else {
+        checksumPageUrl = checksumPageUrl.replace('{build}', '');
+    }
 
     await sigPage.goto(checksumPageUrl, { waitUntil: 'networkidle' });
     const versions = await sigPage.evaluate(function() {
@@ -182,7 +205,7 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
     request.addListener('response', function (response) {
         const downloadfile = fs.createWriteStream(`${destination}/${filename}`, {'flags': 'a'});
         const hash = crypto.createHash('sha256');
-        console.log(`File ${filename}, size: ${response.headers['content-length']} bytes.`);
+        console.log(`File ${filename}, size: ${response.headers['content-length']} bytes. Downloading...`);
         response.addListener('data', function (chunk) {
             hash.update(chunk);
             downloadfile.write(chunk);
