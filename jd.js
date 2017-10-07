@@ -203,7 +203,7 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
     });
 
     request.addListener('response', function (response) {
-        const downloadfile = fs.createWriteStream(`${destination}/${filename}`, {'flags': 'a'});
+        const downloadfile = fs.createWriteStream(`${destination}/${filename}`, {'flags': 'w+'});
         const hash = crypto.createHash('sha256');
         console.log(`File ${filename}, size: ${response.headers['content-length']} bytes. Downloading...`);
         response.addListener('data', function (chunk) {
