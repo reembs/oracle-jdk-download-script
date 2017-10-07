@@ -3,6 +3,7 @@ const fs = require('fs');
 const http = require('http');
 const url = require('url');
 const crypto = require('crypto');
+const readline = require('readline');
 
 process.on('unhandledRejection', (err) => {
     console.error(err);
@@ -23,7 +24,7 @@ function normalizeText(text) {
 const downloadPageUrl = process.env.DOWNLOAD_PAGE ||
     'http://www.oracle.com/technetwork/java/javase/downloads/index.html';
 
-const destination = !process.env.VOLUME ? '/vol' : process.env.VOLUME;
+const destination = !process.env.DEST ? '/vol' : process.env.DEST;
 const javaMajorVersion = envIntDefault(process.env.JAVA_MAJOR_VERSION, 8);
 const searchDistro = !process.env.DISTRO_BIN ? javaMajorVersion === 9 ?
     'linux-x64_bin.tar.gz' :
@@ -221,13 +222,26 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
     request.addListener('response', function (response) {
         const downloadfile = fs.createWriteStream(`${destination}/${filename}`, {'flags': 'a'});
         const hash = crypto.createHash('sha256');
-        console.log(`File ${filename}, size: ${response.headers['content-length']} bytes. Downloading...`);
+        const bytesLength = response.headers['content-length'];
+        console.log(`File ${filename}, size: ${bytesLength} bytes. Downloading...`);
+
+        let progress = 0;
+        const interval = setInterval(() => {
+            readline.clearLine(process.stdout);
+            readline.cursorTo(process.stdout, 0);
+            process.stdout.write(`\r${(progress/bytesLength*100).toFixed(2)}% completed`);
+        }, 500);
+
         response.addListener('data', function (chunk) {
             hash.update(chunk);
             downloadfile.write(chunk);
+            progress += chunk.length
         });
+
         response.addListener("end", function() {
             downloadfile.end();
+            clearInterval(interval);
+            process.stdout.write(`\n`);
             console.log("Finished downloading");
             const downloadedHash = hash.digest('hex');
             console.log(`Downloaded hash: ${downloadedHash}`);
