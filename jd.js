@@ -24,8 +24,8 @@ const downloadPageUrl = process.env.DOWNLOAD_PAGE ||
     'http://www.oracle.com/technetwork/java/javase/downloads/index.html';
 
 const destination = !process.env.VOLUME ? '/vol' : process.env.VOLUME;
-const majorVersionEquals = envIntDefault(process.env.JAVA_MAJOR_VERSION, 8);
-const searchDistro = !process.env.DISTRO_BIN ? majorVersionEquals === 9 ?
+const javaMajorVersion = envIntDefault(process.env.JAVA_MAJOR_VERSION, 8);
+const searchDistro = !process.env.DISTRO_BIN ? javaMajorVersion === 9 ?
     'linux-x64_bin.tar.gz' :
     'linux-x64.tar.gz' : process.env.DISTRO_BIN;
 
@@ -91,7 +91,7 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
         }
 
         link['node'].querySelector('a').click()
-    }, majorVersionEquals);
+    }, javaMajorVersion);
 
     await page.waitForSelector('form.lic_form input');
     const versionArr = await page.evaluate(function() {
@@ -108,8 +108,8 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
 
     console.log(`Detected version: ${versionArr}`);
 
-    if (majorVersionEquals !== versionArr[0]) {
-        throw new Error(`Java major version ${versionArr[0]} was seen on page, expecting ${majorVersionEquals}`);
+    if (javaMajorVersion !== versionArr[0]) {
+        throw new Error(`Java major version ${versionArr[0]} was seen on page, expecting ${javaMajorVersion}`);
     }
 
     if (buildNumberGreaterThan) {
@@ -142,6 +142,22 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
 
     const cookie = await page.evaluate(() => {
         return document.cookie;
+    });
+
+    const availableDistros = await page.evaluate(function() {
+        const anchors = Array.from(document.querySelectorAll('table.downloadBox tbody tr td a'));
+        return anchors.map(anchor => {
+            return anchor.textContent;
+        });
+    });
+
+    console.log(`Available distributions for JDK${javaMajorVersion} are:`);
+    availableDistros.forEach(dist => {
+        if (dist.endsWith(searchDistro)) {
+            console.log(`* ${dist}`);
+        } else {
+            console.log(`  ${dist}`);
+        }
     });
 
     await page.evaluate(function(searchDistro) {
@@ -203,7 +219,7 @@ const termsTextHash = process.env.TERMS_TEXT_HASH;
     });
 
     request.addListener('response', function (response) {
-        const downloadfile = fs.createWriteStream(`${destination}/${filename}`, {'flags': 'w+'});
+        const downloadfile = fs.createWriteStream(`${destination}/${filename}`, {'flags': 'a'});
         const hash = crypto.createHash('sha256');
         console.log(`File ${filename}, size: ${response.headers['content-length']} bytes. Downloading...`);
         response.addListener('data', function (chunk) {
